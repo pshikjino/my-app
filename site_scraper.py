@@ -1947,6 +1947,11 @@ class SiteScraper:
         total_text_nodes = 0
         skipped_nav = 0
         skipped_technical = 0
+        skipped_invalid = 0
+        skipped_short_or_empty = 0
+        skipped_no_parent = 0
+        skipped_ai_no_result = 0
+        sample_skips = []
         pages_to_process = self.downloaded_pages  # ВСЕ СТРАНИЦЫ без ограничений!
         logging.info(f"📄 Processing ALL {len(pages_to_process)} pages for AI rewriting")
 
@@ -2257,6 +2262,7 @@ class SiteScraper:
                 text_elements = soup.find_all(text=True)
 
                 for text_node in text_elements:
+                    total_text_nodes += 1
                     # Check stop conditions and replacement limit - UNLIMITED!
                     if total_replacements >= 500000:  # 500k replacements - практически безлимит
                         logging.info(f"🛑 Reached maximum replacement limit (500000)")
@@ -2267,10 +2273,12 @@ class SiteScraper:
 
                     # Skip comments and non-NavigableString elements
                     if isinstance(text_node, Comment) or not isinstance(text_node, NavigableString):
+                        skipped_technical += 1
                         continue
                     
                     # Ensure text_node has a parent
                     if not text_node.parent or not hasattr(text_node.parent, 'name'):
+                        skipped_no_parent += 1
                         continue
 
                     # Skip ONLY critical technical tags - ULTRA MINIMAL
@@ -2278,15 +2286,18 @@ class SiteScraper:
                         'script', 'style', 'noscript'
                     }
                     if text_node.parent.name in excluded_tags:
+                        skipped_technical += 1
                         continue
 
                     # Skip navigation elements using improved DOM traversal
                     if is_navigation_element(text_node):
+                        skipped_nav += 1
                         continue
 
                     # Get text content with None check
                     text_content = getattr(text_node, 'string', None)
                     if not text_content:
+                        skipped_short_or_empty += 1
                         continue
                     
                     # Preserve leading/trailing whitespace for proper replacement
@@ -2294,6 +2305,9 @@ class SiteScraper:
                     clean_text = original_text.strip()
                     
                     if not is_valid_text_for_rewriting(clean_text):
+                        skipped_invalid += 1
+                        if len(sample_skips) < 10 and clean_text:
+                            sample_skips.append(f"{local_path} <{text_node.parent.name}> len={len(clean_text)} text='{clean_text[:120]}'")
                         continue
 
                     # Attempt AI rewriting with STRICT length control
@@ -2352,6 +2366,8 @@ class SiteScraper:
                         except Exception as e:
                             logging.warning(f"Failed to replace text node: {e}")
                             continue
+                    else:
+                        skipped_ai_no_result += 1
 
                 # ПРАВИЛЬНАЯ СЕРИАЛИЗАЦИЯ: Используем оригинальный контент если есть, или читаем файл
                 if 'converted_soup' in page_data and page_data['converted_soup'] is not None:
@@ -2375,7 +2391,7 @@ class SiteScraper:
                 if page_replacements > 0:
                     logging.info(f"🤖 AI rewriting completed for {local_path} - made {page_replacements} replacements")
                 else:
-                    logging.debug(f"No AI changes made to {local_path}")
+                    logging.info(f"🔎 No AI changes made to {local_path}; text_nodes={len(text_elements)}")
 
                 processed += 1
 
@@ -2389,6 +2405,16 @@ class SiteScraper:
                 continue
 
         # Финальное обновление - НЕ меняем статус, пусть главный метод scrape() установит 'completed'
+        logging.info(
+            f"🔎 AI rewrite diagnostics: total_text_nodes={total_text_nodes}, "
+            f"skipped_nav={skipped_nav}, skipped_technical={skipped_technical}, "
+            f"skipped_invalid={skipped_invalid}, skipped_short_or_empty={skipped_short_or_empty}, "
+            f"skipped_no_parent={skipped_no_parent}, skipped_ai_no_result={skipped_ai_no_result}"
+        )
+        if sample_skips:
+            logging.info("🔎 AI skipped text samples:")
+            for sample in sample_skips:
+                logging.info(f"🔎 {sample}")
         logging.info(f"🤖 AI rewriting completed: {total_replacements} total replacements across {processed} pages")
         return {'status': 'completed', 'message': f'AI переписывание завершено: {total_replacements} замен в {processed} страницах'}
 
