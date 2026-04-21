@@ -1,0 +1,8 @@
+flask
+requests
+beautifulsoup4
+urllib3
+openai
+lxml
+gunicorn
+gunicorn
