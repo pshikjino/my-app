@@ -1,0 +1,479 @@
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Статус задачи - Site Scraper</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      animation: slideIn 0.6s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.2em;
+      font-weight: 700;
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .job-id {
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      font-size: 0.9em;
+      color: #6c757d;
+      word-break: break-all;
+    }
+
+    .status-card {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .status-running {
+      border-left: 6px solid #007bff;
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+
+    .status-completed {
+      border-left: 6px solid #28a745;
+      background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+    }
+
+    .status-error {
+      border-left: 6px solid #dc3545;
+      background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    }
+
+    .status-archiving {
+      border-left: 6px solid #ffc107;
+      background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+    }
+
+    .status-cancelled {
+      border-left: 6px solid #6c757d;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .status-icon {
+      font-size: 2em;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .status-title {
+      font-size: 1.5em;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .status-message {
+      font-size: 1.1em;
+      color: #495057;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .progress-container {
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-text {
+      text-align: center;
+      font-weight: 600;
+      color: #495057;
+      margin-top: 10px;
+      font-size: 1.1em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.3s ease;
+      text-align: center;
+      min-width: 150px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, #28a745, #20c997);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(45deg, #6c757d, #495057);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-danger {
+      background: linear-gradient(45deg, #dc3545, #c82333);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-warning {
+      background: linear-gradient(45deg, #ffc107, #e0a800);
+      color: #212529;
+    }
+
+    .btn-warning:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(255, 193, 7, 0.3);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .info-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-card-icon {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .info-card-title {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .info-card-value {
+      color: #6c757d;
+      font-size: 0.9em;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .auto-refresh {
+      text-align: center;
+      color: #6c757d;
+      font-size: 0.9em;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+        margin: 10px;
+      }
+
+      h1 {
+        font-size: 1.8em;
+      }
+
+      .actions {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Статус задачи</h1>
+    <div class="job-id">ID: {{ job_id }}</div>
+    
+    <div class="status-card status-{{ current_status.status }}">
+      <div class="status-header">
+        <div class="status-icon">
+          {% if current_status.status == 'running' %}
+            <span class="loading-spinner"></span>🔄
+          {% elif current_status.status == 'completed' %}
+            ✅
+          {% elif current_status.status == 'error' %}
+            ❌
+          {% elif current_status.status == 'cancelled' %}
+            🚫
+          {% elif current_status.status == 'archiving' %}
+            📦
+          {% else %}
+            ❓
+          {% endif %}
+        </div>
+        <div class="status-title" id="status-text">
+          {% if current_status.status == 'running' %}
+            Выполняется
+          {% elif current_status.status == 'completed' %}
+            Завершено
+          {% elif current_status.status == 'error' %}
+            Ошибка
+          {% elif current_status.status == 'cancelled' %}
+            Остановлено
+          {% elif current_status.status == 'archiving' %}
+            Архивация
+          {% else %}
+            Неизвестно
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="status-message" id="status-message">{{ current_status.message }}</div>
+      
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width: {{ current_status.progress|round|int }}%"></div>
+        </div>
+        <div class="progress-text">
+          Прогресс: <span id="progress-text">{{ current_status.progress|round|int }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      {% if ready %}
+        <a href="{{ url_for('download', job_id=job_id) }}" class="btn btn-primary">
+          📥 Скачать ZIP архив
+        </a>
+      {% else %}
+        <div class="auto-refresh">
+          🔄 Обновляется автоматически каждые 3 секунды...
+        </div>
+      {% endif %}
+      
+      <button class="btn btn-secondary" onclick="location.reload()">
+        🔄 Обновить вручную
+      </button>
+      
+      {% if current_status.status == 'running' %}
+        <a href="{{ url_for('stop_job', job_id=job_id) }}" class="btn btn-danger" 
+           onclick="return confirm('Остановить выполнение задачи?')">
+           🛑 Остановить задачу
+        </a>
+      {% endif %}
+      
+      {% if current_status.status == 'running' and current_status.progress > 50 %}
+        <a href="{{ url_for('force_complete', job_id=job_id) }}" class="btn btn-warning" 
+           onclick="return confirm('Принудительно завершить задачу без AI обработки?')">
+           ⚡ Завершить принудительно
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-icon">🕐</div>
+        <div class="info-card-title">Время выполнения</div>
+        <div class="info-card-value">{{ current_status.get('timestamp', 'N/A') }}</div>
+      </div>
+      {% if expiration_time %}
+      <div class="info-card">
+        <div class="info-card-icon">⏰</div>
+        <div class="info-card-title">Удаление через</div>
+        <div class="info-card-value">{{ expiration_time.strftime('%d.%m %H:%M') }}</div>
+      </div>
+      {% endif %}
+      <div class="info-card">
+        <div class="info-card-icon">📈</div>
+        <div class="info-card-title">Прогресс</div>
+        <div class="info-card-value">{{ current_status.progress|round|int }}%</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-icon">🔧</div>
+        <div class="info-card-title">Статус</div>
+        <div class="info-card-value">{{ current_status.status }}</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function updateStatus() {
+      fetch('/api/status/{{ job_id }}')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          document.getElementById('status-text').textContent = data.status;
+          document.getElementById('status-message').textContent = data.message;
+          document.getElementById('progress-fill').style.width = Math.round(data.progress) + '%';
+          document.getElementById('progress-text').textContent = Math.round(data.progress) + '%';
+          
+          // Update status class
+          const statusCard = document.querySelector('.status-card');
+          statusCard.className = 'status-card status-' + data.status;
+          
+          // Update icon based on status
+          const iconElement = document.querySelector('.status-icon');
+          if (data.status === 'running') {
+            iconElement.innerHTML = '<span class="loading-spinner"></span>🔄';
+          } else if (data.status === 'completed') {
+            iconElement.innerHTML = '✅';
+          } else if (data.status === 'error') {
+            iconElement.innerHTML = '❌';
+          } else if (data.status === 'cancelled') {
+            iconElement.innerHTML = '🚫';
+          } else if (data.status === 'archiving') {
+            iconElement.innerHTML = '📦';
+          }
+          
+          // If completed, reload page to show download button
+          if (data.ready && !document.querySelector('.btn-primary')) {
+            location.reload();
+          }
+        })
+        .catch(error => {
+          console.error('Error updating status:', error);
+          // Показываем ошибку пользователю в интерфейсе
+          document.getElementById('status-text').textContent = 'error';
+          document.getElementById('status-message').textContent = 'Ошибка получения статуса: ' + error.message;
+          
+          // Обновляем UI для показа ошибки
+          const statusCard = document.querySelector('.status-card');
+          statusCard.className = 'status-card status-error';
+          document.querySelector('.status-icon').innerHTML = '❌';
+        });
+    }
+    
+    // Update every 3 seconds only if not completed
+    if ('{{ current_status.status }}' !== 'completed') {
+      setInterval(updateStatus, 3000);
+    }
+  </script>
+</body>
+</html>
