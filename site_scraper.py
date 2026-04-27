@@ -2195,7 +2195,7 @@ class SiteScraper:
                     length_instruction = f"Keep SIMILAR length (around {original_length} characters, max {original_length + 100})"
 
                 response = self.openai_client.chat.completions.create(
-                    model="gpt-4.1-mini",
+                    model="gpt-5.4-mini",
                     messages=[
                         {"role": "system", "content": f"{language_prompt} You are writing for: {domain_name}. {length_instruction}. Add subtle spoken language nuances, personal tone, small imperfections that make the text sound authentically human. Reply with ONLY the rewritten text."},
                         {"role": "user", "content": text_content.strip()}
