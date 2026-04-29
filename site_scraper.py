@@ -2200,7 +2200,6 @@ class SiteScraper:
                         {"role": "system", "content": f"{language_prompt} You are writing for: {domain_name}. {length_instruction}. Add subtle spoken language nuances, personal tone, small imperfections that make the text sound authentically human. Reply with ONLY the rewritten text."},
                         {"role": "user", "content": text_content.strip()}
                     ],
-                    max_tokens=min(int(original_length * 1.5), 600),
                     temperature=0.85
                 )
 
